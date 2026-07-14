@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Smart Tourist Safety System</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
+    body { background: #0f172a; color: #e2e8f0; }
+
+    header {
+        display: flex; justify-content: space-between; align-items: center;
+        padding: 1rem 2rem; background: #1e293b; border-bottom: 2px solid #38bdf8;
+        position: sticky; top: 0; z-index: 1000; flex-wrap: wrap; gap: 0.5rem;
+    }
+    header h1 { font-size: 1.4rem; color: #38bdf8; }
+   .status span { margin-left: 1rem; font-size: 0.9rem; }
+    #connectionStatus { color: #4ade80; }
+
+   .grid {
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        gap: 1rem;
+        padding: 1rem 2rem;
+    }
+
+   .card {
+        background: #1e293b;
+        border-radius: 12px;
+        padding: 1rem;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+    }
+   .card h2 { margin-bottom: 1rem; color: #f8fafc; font-size: 1.1rem; }
+
+   .map-card { grid-row: span 2; }
+    #map { height: 450px; border-radius: 8px; }
+
+   .legend { margin-top: 0.5rem; font-size: 0.85rem; display: flex; gap: 1rem; flex-wrap: wrap; }
+   .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 5px; }
+   .dot.safe { background: #4ade80; }
+   .dot.risk { background: #f87171; }
+   .dot.tourist { background: #38bdf8; }
+
+   .alert-list { max-height: 320px; overflow-y: auto; }
+   .alert {
+        padding: 0.8rem; margin-bottom: 0.5rem; border-left: 4px solid;
+        border-radius: 6px; background: #0f172a; animation: slideIn 0.3s;
+    }
+    @keyframes slideIn { from {opacity:0; transform: translateX(-10px);} to {opacity:1; transform: translateX(0);} }
+   .alert.high { border-color: #f87171; background: #2a0f14; }
+   .alert.med { border-color: #fbbf24; background: #2a240f; }
+   .alert.low { border-color: #4ade80; background: #0f1a12; }
+
+    button {
+        width: 100%; padding: 0.7rem; margin-top: 0.8rem;
+        background: #38bdf8; border: none; border-radius: 8px;
+        color: #0f172a; font-weight: 600; cursor: pointer; transition: 0.2s;
+    }
+    button:hover { background: #0ea5e9; transform: scale(1.02); }
+    button.secondary { background: #334155; color: #e2e8f0; }
+    button.secondary:hover { background: #475569; }
+
+   .id-card {
+        display: flex; gap: 1rem; background: #0f172a; padding: 1rem; border-radius: 8px; align-items: center;
+    }
+   .qr {
+        width: 80px; height: 80px; background: white; color: black;
+        display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 0.7rem; border-radius: 6px;
+    }
+   .verified { color: #4ade80; }
+   .note { font-size: 0.85rem; color: #94a3b8; margin-top: 0.5rem; }
+    #riskChart { max-height: 200px; }
+
+    footer { text-align: center; padding: 1rem; color: #64748b; font-size: 0.8rem; }
+
+    @media(max-width: 900px){
+       .grid { grid-template-columns: 1fr; padding: 1rem; }
+        header { padding: 1rem; }
+        #map { height: 350px; }
+    }
+</style>
+</head>
+<body>
+
+<header>
+    <h1>🛡️ Smart Tourist Safety Command Center</h1>
+    <div class="status">
+        <span id="connectionStatus">● Connected</span>
+        <span id="touristCount">Tourists Online: 127</span>
+    </div>
+</header>
+
+<main class="grid">
+    <!-- MAP + GEO-FENCING -->
+    <section class="card map-card">
+        <h2>Live Geo-Fencing Map</h2>
+        <div id="map"></div>
+        <div class="legend">
+            <span><span class="dot safe"></span>Safe Zone</span>
+            <span><span class="dot risk"></span>Risk Zone</span>
+            <span><span class="dot tourist"></span>Tourist</span>
+        </div>
+    </section>
+
+    <!-- AI ALERTS -->
+    <section class="card">
+        <h2>AI Incident Alerts</h2>
+        <div id="alertList" class="alert-list"></div>
+        <button id="simulateBtn">🚨 Simulate SOS Alert</button>
+        <button id="clearAlertsBtn" class="secondary">Clear Alerts</button>
+    </section>
+
+    <!-- BLOCKCHAIN DIGITAL ID -->
+    <section class="card">
+        <h2>Blockchain Digital ID Wallet</h2>
+        <div id="digitalId" class="id-card">
+            <div class="qr" id="qrCode">0xA1B2</div>
+            <div class="id-info">
+                <p><b>Name:</b> <span id="idName">Hari prasath</span></p>
+                <p><b>Nationality:</b> <span id="idNation">INDIA></p>
+                <p><b>Hotel:</b> <span id="idHotel">Grand Karur</span></p>
+                <p><b>Status:</b> <span class="verified">✓ Verified on Chain</span></p>
+            </div>
+        </div>
+        <button id="issueIdBtn">+ Issue New Digital ID</button>
+    </section>
+
+    <!-- AI RISK ANALYTICS -->
+    <section class="card">
+        <h2>AI Risk Analytics</h2>
+        <canvas id="riskChart"></canvas>
+        <p class="note">AI predicts high risk in Market Area after 8PM</p>
+    </section>
+</main>
+
+<footer>
+    Smart Tourist Safety System v1.1 | Powered by AI + Geo-Fencing + Blockchain
+</footer>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+    // ===== 1. MAP + GEO-FENCING =====
+    const map = L.map('map').setView([10.9601, 78.0766], 13); // Karur, TN
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap Contributors'
+    }).addTo(map);
+
+    // Safe Zone Polygon
+    const safeZone = L.polygon([
+        [10.965, 78.070], [10.965, 78.085], [10.955, 78.085], [10.955, 78.070]
+    ], {color: '#4ade80', fillOpacity: 0.15, weight: 2}).addTo(map).bindPopup("✅ Safe Tourist Zone");
+
+    // Risk Zone Circle
+    const riskZone = L.circle([10.950, 78.080], {
+        color: '#f87171', fillColor: '#f87171', fillOpacity: 0.25, radius: 400, weight: 2
+    }).addTo(map).bindPopup("⚠️ High Risk Area after 8PM");
+
+    // Tourist Markers
+    let tourists = [
+        {name: "John Doe", lat: 10.960, lng: 78.077, inRisk: false},
+        {name: "Maria Garcia", lat: 10.962, lng: 78.079, inRisk: false},
+        {name: "Li Wei", lat: 10.958, lng: 78.075, inRisk: false}
+    ];
+
+    tourists.forEach(t => {
+        t.marker = L.marker([t.lat, t.lng]).addTo(map)
+       .bindPopup(`<b>${t.name}</b><br>Status: Safe`);
+    });
+
+    // Simulate tourist movement + Geo-fence check
+    setInterval(() => {
+        tourists.forEach(t => {
+            t.lat += (Math.random() - 0.5) * 0.001;
+            t.lng += (Math.random() - 0.5) * 0.001;
+            t.marker.setLatLng([t.lat, t.lng]);
+
+            const dist = map.distance([t.lat, t.lng], riskZone.getLatLng());
+            if(dist < riskZone.getRadius() &&!t.inRisk) {
+                t.inRisk = true;
+                t.marker.setPopupContent(`<b>${t.name}</b><br>Status: In Risk Zone`);
+                addAlert(`Geo-fence breach: ${t.name} entered risk zone`, 'high');
+            }
+            if(dist > riskZone.getRadius() && t.inRisk) {
+                t.inRisk = false;
+                t.marker.setPopupContent(`<b>${t.name}</b><br>Status: Safe`);
+                addAlert(`${t.name} exited risk zone`, 'low');
+            }
+        });
+        document.getElementById('touristCount').innerText = `Tourists Online: ${120 + Math.floor(Math.random()*15)}`;
+    }, 3000);
+
+    // ===== 2. AI ALERT SYSTEM =====
+    const alertList = document.getElementById('alertList');
+
+    function addAlert(message, level='med') {
+        const div = document.createElement('div');
+        div.className = `alert ${level}`;
+        div.innerHTML = `<b>[${level.toUpperCase()}]</b> ${message} <br><small>${new Date().toLocaleTimeString()}</small>`;
+        alertList.prepend(div);
+        if(alertList.children.length > 10) alertList.removeChild(alertList.lastChild);
+    }
+
+    document.getElementById('simulateBtn').onclick = () => {
+        addAlert("SOS Button Pressed by John Doe at Fort Area", 'high');
+        map.setView([10.960, 78.077], 16);
+        L.marker([10.960, 78.077]).addTo(map)
+       .bindPopup("🚨 SOS LOCATION").openPopup();
+    };
+
+    document.getElementById('clearAlertsBtn').onclick = () => {
+        alertList.innerHTML = '';
+        addAlert("Alert log cleared by operator", 'low');
+    };
+
+    // Initial alerts
+    addAlert("AI: 3 tourists stationary > 20min near riverbank", 'med');
+    addAlert("Weather AI: Heavy rain predicted in 1 hour", 'low');
+    addAlert("System: Blockchain node synced successfully", 'low');
+
+    // ===== 3. BLOCKCHAIN DIGITAL ID SIMULATION =====
+    function randomHash() {
+        return '0x' + [...Array(8)].map(() => Math.floor(Math.random()*16).toString(16)).join('').toUpperCase();
+    }
+
+    document.getElementById('issueIdBtn').onclick = () => {
+        const names = ["Aisha Khan", "David Lee", "Priya Sharma", "Carlos Ruiz"];
+        const nations = ["India", "UK", "Canada", "Spain"];
+        const hotels = ["Grand Karur", "Royal Stay", "City Inn", "Tourist Lodge"];
+        const idx = Math.floor(Math.random()*4);
+        const newHash = randomHash();
+
+        document.getElementById('idName').innerText = names[idx];
+        document.getElementById('idNation').innerText = nations[idx];
+        document.getElementById('idHotel').innerText = hotels[idx];
+        document.getElementById('qrCode').innerText = newHash;
+
+        addAlert(`New Blockchain ID issued to ${names[idx]}. Tx: ${newHash}`, 'low');
+    };
+
+    // ===== 4. AI RISK CHART =====
+    const ctx = document.getElementById('riskChart');
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: ['Hotel Zone', 'Market', 'Fort', 'Bus Stand', 'Riverbank'],
+            datasets: [{
+                label: 'Risk Score',
+                data: [12, 78, 45, 60, 30],
+                backgroundColor: ['#4ade80','#f87171','#fbbf24','#f87171','#38bdf8'],
+                borderRadius: 6
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                y: { beginAtZero: true, max: 100, ticks: {color: '#94a3b8'} },
+                x: { ticks: {color: '#94a3b8'} }
+            }
+        }
+    });
+</script>
+</body>
+</html>
